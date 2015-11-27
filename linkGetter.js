@@ -1,3 +1,8 @@
+//
+// Common fetcher. Contain function, for process site.
+// 
+
+
 var fs = require('fs');
 var request = require('request');
 request = request.defaults({jar:true});

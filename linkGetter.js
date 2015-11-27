@@ -13,18 +13,19 @@ var events_page_url = url + 'events/';
 var test_event_url = events_page_url + '163';
 
 
-function onAuthed(e, res, body) {      
+function onAuthed(e, res, body, CLIENT_CB) {      
 	var cookies = res['headers']['set-cookie'][0];
 	var options = { url: test_event_url, headers: { 'Cookie': cookies } };
 
 	request(options, function(e, res, body) {
 		var $ = cheerio.load(body);
-		console.log($("#video>source").attr('src'));
+		CLIENT_CB($("#video>source").attr('src'), "");
 	});
 }
 
-function login(token) {
+function login(token, CLIENT_code) {
 	var data = JSON.parse(fs.readFileSync('adata', 'utf-8'));
+	var link = '';
 	request.post( {
 		url: url+'login', 
 		form: {
@@ -33,19 +34,21 @@ function login(token) {
 			'user[password]': data.password, 
 				'user[remember_me]': 0
 		} },
-		onAuthed);
+		function(e, res, body) { onAuthed(e, res, body, CLIENT_code); } );
 }
 
-function onTokenParse(e, res, body) {
+function onTokenParse(e, res, body, CLIENT_code) {
 	var $ = cheerio.load(body);
 	var token = $("input[name='authenticity_token']").attr('value');
-	login(token);
+	login(token, CLIENT_code);
 }
 
-// request(url+'login', onTokenParse);
 
 module.exports.onEach = function(callback) {
-	console.log(callback());
+	request(url+'login', function(e, res, body) { 
+		var CLIENT_code = callback;
+		onTokenParse(e, res, body, CLIENT_code); 
+	});
 }
 module.exports.onAll = function(callback) {
 	console.log(callback());

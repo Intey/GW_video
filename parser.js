@@ -7,20 +7,19 @@ var url = 'http://geekbrains.ru/';
 var events_page_url = url + 'events/';
 var test_event_url = events_page_url + '163';
 
-// logining
-// paging
-function login() {
+
+function onAuthed(e, res, body) {      
+  var cookies = res['headers']['set-cookie'][0];
+  var options = { url: test_event_url, headers: { 'Cookie': cookies } };
+
+  request(options, function(e, res, body) {
+    var $ = cheerio.load(body);
+    console.log($("#video>source").attr('src'));
+  });
+}
+
+function login(token) {
   var data = JSON.parse(fs.readFileSync('adata', 'utf-8'));
-  console.log("username: " + data.username);
-  console.log("password: " + data.password);
-
-  var token = '';
-  request(url+'login', function(e, res, body) {
-      //console.log("GETed login page");
-      var $ = cheerio.load(body);
-      token = $("input[name='authenticity_token']").attr('value');
-    });
-
   request.post( {
     url: url+'login', 
     form: {
@@ -29,43 +28,18 @@ function login() {
       'user[password]': data.password, 
       'user[remember_me]': 0
     } },
-      function (e, res, body) {
-          var cookies = res['headers']['set-cookie'][0];
-          //console.log("GET COOKIES");
-          //console.log(cookies);
-          var options = { url: test_event_url, headers: { 'Cookie': cookies } };
-
-          request(options, function(e, res, body) {
-            if (!e && res.statusCode == 200) {
-              var $ = cheerio.load(body);
-              console.log($("#video>source").attr('src'));
-              //fs.writeFile('result', body);
-            }
-            else {
-              console.log("ERROR OCCURE");
-              console.log(e);
-            }
-          });
-      });
+    onAuthed);
 }
 
-function parse(body) {
-    $ = cheerio.load(body);
-    var target = $('#video > video > source ');
-    console.log("=========== parsed");
-    // console.log($('body').text());
-    // console.log(target.attr('src'));
-    // fs.writeFile('page.html', body);
+function onTokenParse(e, res, body) {
+      var $ = cheerio.load(body);
+      var token = $("input[name='authenticity_token']").attr('value');
+      login(token);
 }
 
-login();
+// request(url+'login', onTokenParse);
 
-// request(test_event_url, function (e, res, body) {
-//   if (!e && res.statusCode == 200) {
-//     parse(body);
-//   }
-//   else { 
-//     console.log("======= error occured");
-//     console.log(e);
-//   }
-// });
+module.exports.run = function(callback) {
+  console.log(callback());
+}
+

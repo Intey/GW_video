@@ -13,7 +13,7 @@ var events_page_url = url + 'events/';
 var test_event_url = events_page_url + '163';
 
 Parser = {
-	CLIENT_callback: function(link, number) {
+	CLIENT_callback: function(link, number, videoName) {
 		console.log(number + ";" + link);
 	},
 
@@ -25,7 +25,7 @@ Parser = {
 			var $ = cheerio.load(body);
 		   	$("#all>div>a").each(function(i, e) {
 				// parse event number from link like: '/event/123'. Get last part
-				var event_number = $(e).attr('href').split('/').reverse()[0];
+				var event_number = parseInt($(e).attr('href').split('/').reverse()[0]);
 				// slice for delete first '/': url already contains this
 				var link = url + $(e).attr('href').slice(1) + '/attendee';
 				options.url = link;
@@ -34,8 +34,9 @@ Parser = {
 				if ( event_number >= 144 && event_number <= 197) {
 					request(options, function(e, res, body){
 						var $ = cheerio.load(body);
-						var videoLink = $("video > source").attr('src');
-						if (videoLink) Parser.CLIENT_callback(videoLink, event_number);
+						var video_link = $("video > source").attr('src');
+						var video_name = $("h1.h3").text();
+						if (video_link) Parser.CLIENT_callback(video_link, event_number, video_name);
 					});
 				}
 			});

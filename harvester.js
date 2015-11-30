@@ -6,6 +6,7 @@
 var fs = require('fs');
 var request = require('request');
 var linkGetter = require('./linkGetter.js');
+var ProgressBar = require('progress');
 
 var splitter = ';';
 
@@ -14,10 +15,29 @@ var dest_path = "videos";
 
 function processLink(link, event_number, video_name) {
 	if ( exists_videos.indexOf(event_number) == -1 ) {
+		var bar = {};
 		console.log("New video. Start downloading" + video_name);
-		request(link).pipe( 
-				fs.createWriteStream(dest_path + '/' + video_name + '.mp4') 
-				);
+
+		request(link)
+		.on('response', function(res){
+			console.log("New video! - " + video_name );
+			var len = parseInt(res.headers['content-length'], 10);
+			console.log();
+			bar = new ProgressBar('Downloading [:bar] :percent :etas', {
+				complete: '=',
+				incomplete: ' ',
+				width: 40,
+				total: len
+			})
+		})
+		.on('data', function(chunk) {
+			bar.tick(chunk.length);
+		})
+		.on('error', function(err) {
+			console.log(" === Error on download video === ");
+			console.log(err);
+		})
+		.pipe( fs.createWriteStream(dest_path + '/' + video_name + '.mp4') );
 
 		fs.appendFile('links', event_number + splitter + link + '\n');
 	} 

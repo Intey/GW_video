@@ -5,12 +5,9 @@ Just for lulz.
 ## Install & Start
 ### Requirements
 - Node.js
-- npm
-- (look package.json)
 
-If in this repo you can't find `node_modules`, so you lucky. 
-Use:  `npm install` to get dependencies.
+All dependencies already in node_modules.
 
-After all, just insert in `adata` file username and password for site, and run
-
-`node harvester.js`
+1. Create directory videos, or change `dest_path` in `harverster.js` to exists folder: videos will be downloads in it.
+2. Insert in `adata` file username and password for site
+3. Run `node harvester.js` and wait.

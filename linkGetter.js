@@ -1,6 +1,6 @@
 //
 // Common fetcher. Contain function, for process site.
-// 
+//
 
 
 var fs = require('fs');
@@ -12,45 +12,65 @@ var url = 'http://geekbrains.ru/';
 var events_page_url = url + 'events/';
 var test_event_url = events_page_url + '163';
 
+Parser = {
+	CLIENT_callback: function(link, number) {
+		console.log(number + ";" + link);
+	},
 
-function onAuthed(e, res, body, CLIENT_CB) {      
-	var cookies = res['headers']['set-cookie'][0];
-	var options = { url: test_event_url, headers: { 'Cookie': cookies } };
+	getVideoLink: function(e, res, body) {
+		var cookies = res['headers']['set-cookie'][0];
+		var options = { url: events_page_url, headers: { 'Cookie': cookies } };
+		request(options, function(e, res, body) {
+			var links = [];
+			var $ = cheerio.load(body);
+		   	$("#all>div>a").each(function(i, e) {
+				// parse event number from link like: '/event/123'. Get last part
+				var event_number = $(e).attr('href').split('/').reverse()[0];
+				// slice for delete first '/': url already contains this
+				var link = url + $(e).attr('href').slice(1) + '/attendee';
+				options.url = link;
+				delete $; // cleaning <3
+				// processing page with video
+				if ( event_number >= 144 && event_number <= 197) {
+					request(options, function(e, res, body){
+						var $ = cheerio.load(body);
+						var videoLink = $("video > source").attr('src');
+						if (videoLink) Parser.CLIENT_callback(videoLink, event_number);
+					});
+				}
+			});
+		});
+	},
 
-	request(options, function(e, res, body) {
-		var $ = cheerio.load(body);
-		CLIENT_CB($("#video>source").attr('src'), "");
-	});
-}
-
-function login(token, CLIENT_code) {
-	var data = JSON.parse(fs.readFileSync('adata', 'utf-8'));
-	var link = '';
-	request.post( {
-		url: url+'login', 
-		form: {
-			'authenticity_token': token, 
-			'user[email]': data.username, 
-			'user[password]': data.password, 
+	login: function(token) {
+		var data = JSON.parse(fs.readFileSync('adata', 'utf-8'));
+		var link = '';
+		request.post( {
+			url: url+'login',
+			form: {
+				'authenticity_token': token,
+				'user[email]': data.username,
+				'user[password]': data.password,
 				'user[remember_me]': 0
-		} },
-		function(e, res, body) { onAuthed(e, res, body, CLIENT_code); } );
-}
-
-function onTokenParse(e, res, body, CLIENT_code) {
-	var $ = cheerio.load(body);
-	var token = $("input[name='authenticity_token']").attr('value');
-	login(token, CLIENT_code);
-}
-
-
+			}},
+			Parser.getVideoLink
+		);
+	},
+	onTokenParse: function(e, res, body) {
+		var $ = cheerio.load(body);
+		var token = $("input[name='authenticity_token']").attr('value');
+		Parser.login(token);
+	}
+};
 module.exports.onEach = function(callback) {
-	request(url+'login', function(e, res, body) { 
-		var CLIENT_code = callback;
-		onTokenParse(e, res, body, CLIENT_code); 
+	request(url+'login', function(e, res, body) {
+		Parser.CLIENT_callback = callback;
+		Parser.onTokenParse(e, res, body);
 	});
 }
 module.exports.onAll = function(callback) {
 	console.log(callback());
 }
+
+exports.Parser = Parser;
 
